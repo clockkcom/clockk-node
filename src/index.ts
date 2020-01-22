@@ -41,14 +41,19 @@ export class Clockk {
     });
   }
 
-  private async clockkGetRequest(appendUrl: String): Promise<any> {
+  private async clockkGetRequest(appendUrl: String, include?: String): Promise<any> {
     return new Promise((resolve, reject) => {
       if (!this.options.token) {
         reject("token option must be set in constructor")
       }
+      let url = `${this.options.api_url}${appendUrl}`
+      if (include) {
+        url += `?include=${include}`
+      }
+      console.log(url)
       request
         .get({
-          url: `${this.options.api_url}${appendUrl}`,
+          url: url,
           headers: {
             'Authorization': this.options.token?.access_token
           }
@@ -70,12 +75,26 @@ export class Clockk {
     return await this.clockkGetRequest("/oauth/me")
   }
 
-  async getProjects() {
+  async getProject(id: Number, include: { client: Boolean } = { client: false }) {
     return new Promise(async (resolve, reject) => {
       if (!this.options.customer_id) {
         reject("customer_id option must be set")
       }
-      let projects = await this.clockkGetRequest("/api/v1/" + this.options.customer_id + "/projects")
+      let includeQuery = 'integration-performed-actions'
+      if (include.client) includeQuery += ',client.integration-performed-actions'
+      let project = await this.clockkGetRequest("/api/v1/" + this.options.customer_id + "/projects/" + id, includeQuery)
+      resolve(project)
+    })
+  }
+
+  async getProjects(include: { client: Boolean } = { client: false }) {
+    return new Promise(async (resolve, reject) => {
+      if (!this.options.customer_id) {
+        reject("customer_id option must be set")
+      }
+      let includeQuery = 'integration-performed-actions'
+      if (include.client) includeQuery += ',client.integration-performed-actions'
+      let projects = await this.clockkGetRequest("/api/v1/" + this.options.customer_id + "/projects", includeQuery)
       resolve(projects)
     })
   }
@@ -95,8 +114,7 @@ export class Clockk {
       id: '96a770cd-b677-49dc-b733-f4b53197f81c',
       name: 'Programming',
       description: 'Elixir rocks'
-    }
-    'task-type',
+    },
     {
       additionalInfo: 'arbitrary information about this task type'
     }
@@ -126,23 +144,23 @@ export class Clockk {
     return new Promise<String>((resolve, reject) => {
       let resourceType: String = ''
       switch (true) {
-        case typeof resource.color !== undefined:
+        case typeof resource.color != 'undefined':
           resourceType = 'project'
           break;
 
-        case typeof resource.time_sheet_date !== undefined:
+        case typeof resource.time_sheet_date != 'undefined':
           resourceType = 'time-sheet'
           break;
 
-        case typeof resource.duration !== undefined:
+        case typeof resource.duration != 'undefined':
           resourceType = 'time-sheet-entry'
           break;
 
-        case typeof resource.notes !== undefined:
+        case typeof resource.notes != 'undefined':
           resourceType = 'client'
           break;
 
-        case typeof resource.description !== undefined:
+        case typeof resource.description != 'undefined':
           resourceType = 'task-type'
           break;
 
