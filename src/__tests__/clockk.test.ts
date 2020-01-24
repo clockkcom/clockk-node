@@ -43,15 +43,12 @@ describe('With VCR', () => {
     server.close(done);
   });
 
-  let clockk = new Clockk({ api_url: 'http://localhost:8888', customer_id: '2f8bc45f-3018-478b-9219-82f2dee6009c' })
+  let clockk = new Clockk({ api_url: 'http://localhost:8888', customer_id: '2f8bc45f-3018-478b-9219-82f2dee6009c', client_id: "07557b420f3dc959992821a1a17bc16baeb886e5134f3d925193625665005a5c", client_secret: "01f62d57360b7def4ee9b8224d7a16f2a39e10fc474117ef47fae2a388485cdf", redirect_uri: "https://eric-clockk-xero.ngrok.io/install/clockk" })
 
   test('exchange code for access token', async () => {
-    const token = await clockk.exchangeCodeForToken({
-      code: "3d2e5b7c3295c18e999421cf791b58b3d2587e8157be35b24ba676957ee71ea9",
-      client_id: "07557b420f3dc959992821a1a17bc16baeb886e5134f3d925193625665005a5c",
-      client_secret: "01f62d57360b7def4ee9b8224d7a16f2a39e10fc474117ef47fae2a388485cdf",
-      redirect_uri: "https://eric-clockk-xero.ngrok.io/install/clockk"
-    });
+    const token = await clockk.exchangeCodeForToken(
+      "3d2e5b7c3295c18e999421cf791b58b3d2587e8157be35b24ba676957ee71ea9"
+    );
 
     expect(token.access_token).toBe("34d7eba1886464d76c01478fd42ff490b98ade03907e727eb6370a0c56fdb16d");
   })

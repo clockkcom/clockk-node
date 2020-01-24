@@ -13,17 +13,20 @@ export interface ClockkToken {
 export interface ClockkOptions {
   token?: ClockkToken,
   api_url?: String,
-  customer_id?: String
+  customer_id?: String,
+  client_id: String,
+  client_secret: String,
+  redirect_uri: String
 }
 
 export class Clockk {
   constructor(public options: ClockkOptions) { }
 
-  async exchangeCodeForToken(claims: { code: String, client_id: String, client_secret: String, redirect_uri: String }) {
+  async exchangeCodeForToken(code: String) {
     return new Promise<ClockkToken>((resolve, reject) => {
       request
         .post(
-          { url: `${this.options.api_url}/oauth/token?client_id=${claims.client_id}&client_secret=${claims.client_secret}&grant_type=authorization_code&code=${claims.code}&redirect_uri=${claims.redirect_uri}` },
+          { url: `${this.options.api_url}/oauth/token?client_id=${this.options.client_id}&client_secret=${this.options.client_secret}&grant_type=authorization_code&code=${code}&redirect_uri=${this.options.redirect_uri}` },
           (error: any, response: any, body: any) => {
             if (error) {
               reject(error);
@@ -33,7 +36,32 @@ export class Clockk {
                 this.options.token = token;
                 resolve(token);
               } else {
-                reject(JSON.parse(body));
+                reject(response);
+              }
+            }
+          }
+        )
+    });
+  }
+
+  async refreshToken() {
+    return new Promise<ClockkToken>((resolve, reject) => {
+      if (!this.options.token) {
+        reject("token option must be set in constructor")
+      }
+      request
+        .post(
+          { url: `${this.options.api_url}/oauth/token?client_id=${this.options.client_id}&client_secret=${this.options.client_secret}&grant_type=refresh_token&refresh_token=${this.options.token?.refresh_token}` },
+          (error: any, response: any, body: any) => {
+            if (error) {
+              reject(error);
+            } else {
+              if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
+                let token = JSON.parse(body);
+                this.options.token = token;
+                resolve(token);
+              } else {
+                reject(response);
               }
             }
           }
@@ -50,29 +78,28 @@ export class Clockk {
       if (include) {
         url += `?include=${include}`
       }
-      console.log(url)
       request
         .get({
           url: url,
           headers: {
             'Authorization': this.options.token?.access_token
           }
-        }, (error: any, response: any, body: any) => {
+        }, async (error: any, response: any, body: any) => {
           if (error) {
             reject(error);
           } else {
             if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
               resolve(new Deserializer().deserialize(JSON.parse(body)))
             } else {
-              reject(JSON.parse(body));
+              reject(response);
             }
           }
         })
     })
   }
 
-  async getCustomer() {
-    return await this.clockkGetRequest("/oauth/me")
+  getCustomer() {
+    return this.clockkGetRequest("/oauth/me")
   }
 
   async getProject(id: Number, include: { client: Boolean } = { client: false }) {
@@ -82,7 +109,11 @@ export class Clockk {
       }
       let includeQuery = 'integration-performed-actions'
       if (include.client) includeQuery += ',client.integration-performed-actions'
-      let project = await this.clockkGetRequest("/api/v1/" + this.options.customer_id + "/projects/" + id, includeQuery)
+      let project =
+        await this.clockkGetRequest("/api/v1/" + this.options.customer_id + "/projects/" + id, includeQuery)
+          .catch(error => {
+            reject(error)
+          })
       resolve(project)
     })
   }
@@ -94,7 +125,11 @@ export class Clockk {
       }
       let includeQuery = 'integration-performed-actions'
       if (include.client) includeQuery += ',client.integration-performed-actions'
-      let projects = await this.clockkGetRequest("/api/v1/" + this.options.customer_id + "/projects", includeQuery)
+      let projects =
+        await this.clockkGetRequest("/api/v1/" + this.options.customer_id + "/projects", includeQuery)
+          .catch(error => {
+            reject(error)
+          })
       resolve(projects)
     })
   }
@@ -135,7 +170,11 @@ export class Clockk {
         )
           .serialize(attrs)
 
-      let ipa = await this.clockkCreateRequest('integration-performed-actions', data)
+      let ipa =
+        await this.clockkCreateRequest('integration-performed-actions', data)
+          .catch(error => {
+            reject(error)
+          })
       resolve(ipa)
     })
   }
@@ -188,14 +227,14 @@ export class Clockk {
             'Content-Type': 'application/vnd.api+json'
           },
           body: JSON.stringify(payload)
-        }, (error: any, response: any, body: any) => {
+        }, async (error: any, response: any, body: any) => {
           if (error) {
             reject(error);
           } else {
             if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
               resolve(new Deserializer().deserialize(JSON.parse(body)))
             } else {
-              reject(JSON.parse(body));
+              reject(response);
             }
           }
         })
