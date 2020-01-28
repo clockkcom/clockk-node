@@ -1,137 +1,116 @@
-var request = require('request');
-import { Serializer, Deserializer } from 'ts-jsonapi';
+import request from 'request';
+import { Deserializer, Serializer } from 'ts-jsonapi';
 
-export interface ClockkToken {
-  access_token: String,
-  refresh_token: String,
-  token_type: String,
-  expires_in: Number
-  created_at: Date,
-  scope: String
+export interface IClockkToken {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  created_at: Date;
+  scope: string;
 }
 
-export interface ClockkOptions {
-  token?: ClockkToken,
-  api_url?: String,
-  customer_id?: String,
-  client_id: String,
-  client_secret: String,
-  redirect_uri: String
+export interface IClockkOptions {
+  token?: IClockkToken;
+  api_url?: string;
+  customer_id?: string;
+  client_id: string;
+  client_secret: string;
+  redirect_uri: string;
 }
 
 export class Clockk {
-  constructor(public options: ClockkOptions) { }
+  constructor(public options: IClockkOptions) { }
 
-  async exchangeCodeForToken(code: String) {
-    return new Promise<ClockkToken>((resolve, reject) => {
-      request
-        .post(
-          { url: `${this.options.api_url}/oauth/token?client_id=${this.options.client_id}&client_secret=${this.options.client_secret}&grant_type=authorization_code&code=${code}&redirect_uri=${this.options.redirect_uri}` },
-          (error: any, response: any, body: any) => {
-            if (error) {
-              reject(error);
-            } else {
-              if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
-                let token = JSON.parse(body);
-                this.options.token = token;
-                resolve(token);
-              } else {
-                reject(response);
-              }
-            }
-          }
-        )
-    });
-  }
-
-  async refreshToken() {
-    return new Promise<ClockkToken>((resolve, reject) => {
-      if (!this.options.token) {
-        reject("token option must be set in constructor")
-      }
-      request
-        .post(
-          { url: `${this.options.api_url}/oauth/token?client_id=${this.options.client_id}&client_secret=${this.options.client_secret}&grant_type=refresh_token&refresh_token=${this.options.token?.refresh_token}` },
-          (error: any, response: any, body: any) => {
-            if (error) {
-              reject(error);
-            } else {
-              if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
-                let token = JSON.parse(body);
-                this.options.token = token;
-                resolve(token);
-              } else {
-                reject(response);
-              }
-            }
-          }
-        )
-    });
-  }
-
-  private async clockkGetRequest(appendUrl: String, include?: String): Promise<any> {
-    return new Promise((resolve, reject) => {
-      if (!this.options.token) {
-        reject("token option must be set in constructor")
-      }
-      let url = `${this.options.api_url}${appendUrl}`
-      if (include) {
-        url += `?include=${include}`
-      }
-      request
-        .get({
-          url: url,
-          headers: {
-            'Authorization': this.options.token?.access_token
-          }
-        }, async (error: any, response: any, body: any) => {
+  public async exchangeCodeForToken(code: string) {
+    return new Promise<IClockkToken>((resolve, reject) => {
+      request.post(
+        {
+          url: `${this.options.api_url}/oauth/token?client_id=${this.options.client_id}&client_secret=${this.options.client_secret}&grant_type=authorization_code&code=${code}&redirect_uri=${this.options.redirect_uri}`,
+        },
+        (error: any, response: any, body: any) => {
           if (error) {
             reject(error);
           } else {
             if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
-              resolve(new Deserializer().deserialize(JSON.parse(body)))
+              const token = JSON.parse(body);
+              this.options.token = token;
+              resolve(token);
             } else {
               reject(response);
             }
           }
-        })
-    })
+        },
+      );
+    });
   }
 
-  getCustomer() {
-    return this.clockkGetRequest("/oauth/me")
+  public async refreshToken() {
+    return new Promise<IClockkToken>((resolve, reject) => {
+      if (!this.options.token) {
+        reject('token option must be set in constructor');
+      }
+      request.post(
+        {
+          url: `${this.options.api_url}/oauth/token?client_id=${this.options.client_id}&client_secret=${this.options.client_secret}&grant_type=refresh_token&refresh_token=${this.options.token?.refresh_token}`,
+        },
+        (error: any, response: any, body: any) => {
+          if (error) {
+            reject(error);
+          } else {
+            if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
+              const token = JSON.parse(body);
+              this.options.token = token;
+              resolve(token);
+            } else {
+              reject(response);
+            }
+          }
+        },
+      );
+    });
   }
 
-  async getProject(id: Number, include: { client: Boolean } = { client: false }) {
+  public getCustomer() {
+    return this.clockkGetRequest('/oauth/me');
+  }
+
+  public async getProject(id: number, include: { client: boolean } = { client: false }) {
     return new Promise(async (resolve, reject) => {
       if (!this.options.customer_id) {
-        reject("customer_id option must be set")
+        reject('customer_id option must be set');
       }
-      let includeQuery = 'integration-performed-actions'
-      if (include.client) includeQuery += ',client.integration-performed-actions'
-      let project =
-        await this.clockkGetRequest("/api/v1/" + this.options.customer_id + "/projects/" + id, includeQuery)
-          .catch(error => {
-            reject(error)
-          })
-      resolve(project)
-    })
+      let includeQuery = 'integration-performed-actions';
+      if (include.client) {
+        includeQuery += ',client.integration-performed-actions';
+      }
+      const project = await this.clockkGetRequest(
+        '/api/v1/' + this.options.customer_id + '/projects/' + id,
+        includeQuery,
+      ).catch(error => {
+        reject(error);
+      });
+      resolve(project);
+    });
   }
 
-  async getProjects(include: { client: Boolean } = { client: false }) {
+  public async getProjects(include: { client: boolean } = { client: false }) {
     return new Promise(async (resolve, reject) => {
       if (!this.options.customer_id) {
-        reject("customer_id option must be set")
+        reject('customer_id option must be set');
       }
-      let includeQuery = 'integration-performed-actions'
-      if (include.client) includeQuery += ',client.integration-performed-actions'
-      let projects =
-        await this.clockkGetRequest("/api/v1/" + this.options.customer_id + "/projects", includeQuery)
-          .catch(error => {
-            reject(error)
-          })
-      resolve(projects)
-    })
+      let includeQuery = 'integration-performed-actions';
+      if (include.client) {
+        includeQuery += ',client.integration-performed-actions';
+      }
+      const projects = await this.clockkGetRequest(
+        '/api/v1/' + this.options.customer_id + '/projects',
+        includeQuery,
+      ).catch(error => {
+        reject(error);
+      });
+      resolve(projects);
+    });
   }
 
   /*
@@ -155,89 +134,120 @@ export class Clockk {
     }
   )
   */
-  async createIntegrationPerformedAction(actionCode: String, resource: any, actionData: any) {
+  public async createIntegrationPerformedAction(actionCode: string, resource: any, actionData: any) {
     return new Promise(async (resolve, reject) => {
-      let resourceType = await this.getResourceTypeFromResource(resource)
-      let attrs: any = {
-        'metadata': actionData,
+      const resourceType = await this.getResourceTypeFromResource(resource);
+      const attrs: any = {
         'action-code': actionCode,
-      }
-      attrs[resourceType + '-id'] = resource.id
-      let data =
-        new Serializer(
-          'integration-performed-actions',
-          { id: 'id', attributes: ['metadata', 'action-code', `${resourceType}-id`] }
-        )
-          .serialize(attrs)
+        metadata: actionData,
+      };
+      attrs[resourceType + '-id'] = resource.id;
+      const data = new Serializer('integration-performed-actions', {
+        id: 'id',
+        attributes: ['metadata', 'action-code', `${resourceType}-id`],
+      }).serialize(attrs);
 
-      let ipa =
-        await this.clockkCreateRequest('integration-performed-actions', data)
-          .catch(error => {
-            reject(error)
-          })
-      resolve(ipa)
-    })
+      const ipa = await this.clockkCreateRequest('integration-performed-actions', data).catch(error => {
+        reject(error);
+      });
+      resolve(ipa);
+    });
   }
 
-  private getResourceTypeFromResource(resource: any) {
-    return new Promise<String>((resolve, reject) => {
-      let resourceType: String = ''
-      switch (true) {
-        case typeof resource.color != 'undefined':
-          resourceType = 'project'
-          break;
-
-        case typeof resource.time_sheet_date != 'undefined':
-          resourceType = 'time-sheet'
-          break;
-
-        case typeof resource.duration != 'undefined':
-          resourceType = 'time-sheet-entry'
-          break;
-
-        case typeof resource.notes != 'undefined':
-          resourceType = 'client'
-          break;
-
-        case typeof resource.description != 'undefined':
-          resourceType = 'task-type'
-          break;
-
-        default:
-          reject('invalid resource. This property should not be modified from the version supplied in the inital Clockk action request')
-      }
-      resolve(resourceType)
-    })
-  }
-
-  private async clockkCreateRequest(appendUrl: String, payload: any): Promise<any> {
+  private async clockkGetRequest(appendUrl: string, include?: string): Promise<any> {
     return new Promise((resolve, reject) => {
-      if (!this.options.customer_id) {
-        reject("customer_id option must be set")
-      }
       if (!this.options.token) {
-        reject("token option must be set in constructor")
+        reject('token option must be set in constructor');
       }
-
-      request
-        .post({
-          url: `${this.options.api_url}/api/v1/${this.options.customer_id}/${appendUrl}`,
+      let url = `${this.options.api_url}${appendUrl}`;
+      if (include) {
+        url += `?include=${include}`;
+      }
+      request.get(
+        {
           headers: {
-            'Authorization': this.options.token?.access_token,
-            'Content-Type': 'application/vnd.api+json'
+            Authorization: this.options.token?.access_token,
           },
-          body: JSON.stringify(payload)
-        }, async (error: any, response: any, body: any) => {
+          url,
+        },
+        async (error: any, response: any, body: any) => {
           if (error) {
             reject(error);
           } else {
             if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
-              resolve(new Deserializer().deserialize(JSON.parse(body)))
+              resolve(new Deserializer().deserialize(JSON.parse(body)));
             } else {
               reject(response);
             }
           }
-        })
-    })
+        },
+      );
+    });
+  }
+
+  private getResourceTypeFromResource(resource: any) {
+    return new Promise<string>((resolve, reject) => {
+      let resourceType: string = '';
+      switch (true) {
+        case typeof resource.color !== 'undefined':
+          resourceType = 'project';
+          break;
+
+        case typeof resource.time_sheet_date !== 'undefined':
+          resourceType = 'time-sheet';
+          break;
+
+        case typeof resource.duration !== 'undefined':
+          resourceType = 'time-sheet-entry';
+          break;
+
+        case typeof resource.notes !== 'undefined':
+          resourceType = 'client';
+          break;
+
+        case typeof resource.description !== 'undefined':
+          resourceType = 'task-type';
+          break;
+
+        default:
+          reject(
+            'invalid resource. This property should not be modified from the version supplied in the inital Clockk action request',
+          );
+      }
+      resolve(resourceType);
+    });
+  }
+
+  private async clockkCreateRequest(appendUrl: string, payload: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      if (!this.options.customer_id) {
+        reject('customer_id option must be set');
+      }
+      if (!this.options.token) {
+        reject('token option must be set in constructor');
+      }
+
+      request.post(
+        {
+          body: JSON.stringify(payload),
+          headers: {
+            Authorization: this.options.token?.access_token,
+            'Content-Type': 'application/vnd.api+json',
+          },
+          url: `${this.options.api_url}/api/v1/${this.options.customer_id}/${appendUrl}`,
+        },
+        async (error: any, response: any, body: any) => {
+          if (error) {
+            reject(error);
+          } else {
+            if (response.statusCode && response.statusCode >= 200 && response.statusCode <= 299) {
+              resolve(new Deserializer().deserialize(JSON.parse(body)));
+            } else {
+              reject(response);
+            }
+          }
+        },
+      );
+    });
   }
 }
