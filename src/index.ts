@@ -20,7 +20,11 @@ export interface IClockkOptions {
 }
 
 export class Clockk {
-  constructor(public options: IClockkOptions) { }
+  constructor(public options: IClockkOptions) {
+    if (!this.options.api_url) {
+      this.options.api_url = "https://ca-central.api.clockk.com"
+    }
+  }
 
   public async exchangeCodeForToken(code: string) {
     return new Promise<IClockkToken>((resolve, reject) => {
@@ -143,8 +147,8 @@ export class Clockk {
       };
       attrs[resourceType + '-id'] = resource.id;
       const data = new Serializer('integration-performed-actions', {
-        id: 'id',
         attributes: ['metadata', 'action-code', `${resourceType}-id`],
+        id: 'id',
       }).serialize(attrs);
 
       const ipa = await this.clockkCreateRequest('integration-performed-actions', data).catch(error => {

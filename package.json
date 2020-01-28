@@ -1,6 +1,6 @@
 {
   "name": "clockk-node",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Clockk SDK for Node.js",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
