@@ -28,7 +28,7 @@
     "node.js"
   ],
   "author": "Clockk.com inc.",
-  "license": "MIT",
+  "license": "closed",
   "devDependencies": {
     "@types/jest": "^24.9.0",
     "@types/lodash": "^4.14.149",
